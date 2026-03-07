@@ -30,6 +30,7 @@ const io = new Server(server, {
   }
 });
 
+app.use(cors());
 /* ---------------- Upload Folder ---------------- */
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

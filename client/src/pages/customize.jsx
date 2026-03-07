@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSocket } from "../hooks/useSocket";
+import { createOrder } from "../api";
 
 const STEPS = ["Select Shirt", "Features", "Upload", "AI Design", "Pricing", "Order"];
 
@@ -123,7 +124,50 @@ export default function Customize() {
     );
   }
 
-  async function placeOrder() {
+async function placeOrder() {
+
+  if (!pricing) return;
+
+  try {
+
+    const data = await createOrder({
+      shirtName: shirt ? shirt.name : "",
+      designName: aiResult ? aiResult.designName : "Custom Design",
+      size,
+      features: selected.map(s => s.feature),
+      total: pricing.total
+    });
+
+    setOrder(data);
+    setTrackSteps(data.trackingSteps);
+    setStep(5);
+
+    const poll = setInterval(async () => {
+
+      try {
+
+        const res = await axios.get(
+          "https://harsha-store.onrender.com/api/orders/" + data.id
+        );
+
+        setTrackSteps(res.data.trackingSteps);
+
+        if (res.data.trackingSteps.every(s => s.done)) {
+          clearInterval(poll);
+        }
+
+      } catch (e) {
+        clearInterval(poll);
+      }
+
+    }, 2500);
+
+  } catch (e) {
+
+    alert("Order failed: " + e.message);
+
+  }
+
     if (!pricing) return;
     try {
       const { data } = await axios.post("/api/orders", {
