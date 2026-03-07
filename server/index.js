@@ -12,17 +12,26 @@ const fs = require("fs");
 const app = express();
 const server = http.createServer(app);
 
+/* ---------------- CORS ---------------- */
+
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"]
+}));
+
+app.use(express.json());
+
 /* ---------------- Socket Setup ---------------- */
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
 
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
+/* ---------------- Upload Folder ---------------- */
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 if (!fs.existsSync("./uploads")) {
@@ -150,58 +159,24 @@ io.on("connection", (socket) => {
 
   io.emit("live_stats", { onlineUsers, liveOrders });
 
-  /* -------- PRICE CALCULATION -------- */
-
   socket.on("calculate_price", (data) => {
 
-    console.log("Price request received:", data);
+    const base = data.shirtPrice || 999;
+    const fabricCost = Math.floor(Math.random()*80)+60;
+    const printCost = (data.featureCount||1)*(Math.floor(Math.random()*60)+80);
+    const laborCost = Math.floor(Math.random()*100)+120;
 
-    const stages = [
-      { msg:"Connecting to manufacturer...", pct:12, delay:700 },
-      { msg:"Analyzing design complexity...", pct:28, delay:1100 },
-      { msg:"Calculating fabric cost...", pct:44, delay:900 },
-      { msg:"Estimating print & embroidery...", pct:61, delay:1000 },
-      { msg:"Checking stock availability...", pct:76, delay:800 },
-      { msg:"Applying GST & delivery...", pct:90, delay:700 },
-      { msg:"Price locked ✓", pct:100, delay:500 }
-    ];
+    const subtotal = base + fabricCost + printCost + laborCost;
+    const gst = Math.round(subtotal * 0.05);
 
-    let i = 0;
-
-    const run = () => {
-
-      if (i >= stages.length) {
-
-        const base = data.shirtPrice || 999;
-        const fabricCost = Math.floor(Math.random()*80)+60;
-        const printCost = (data.featureCount||1)*(Math.floor(Math.random()*60)+80);
-        const laborCost = Math.floor(Math.random()*100)+120;
-
-        const subtotal = base + fabricCost + printCost + laborCost;
-        const gst = Math.round(subtotal * 0.05);
-
-        socket.emit("price_result", {
-          basePrice: base,
-          fabricCost,
-          printCost,
-          laborCost,
-          gst,
-          total: subtotal + gst
-        });
-
-        return;
-      }
-
-      socket.emit("price_progress", stages[i]);
-
-      const delay = stages[i].delay;
-      i++;
-
-      setTimeout(run, delay);
-
-    };
-
-    setTimeout(run, 300);
+    socket.emit("price_result", {
+      basePrice: base,
+      fabricCost,
+      printCost,
+      laborCost,
+      gst,
+      total: subtotal + gst
+    });
 
   });
 
@@ -222,7 +197,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, () => {
-
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-
+  console.log(`🚀 Server running on port ${PORT}`);
 });

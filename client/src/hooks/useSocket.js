@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-/* backend URL */
-const SERVER_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000";
+/* production backend */
+const SERVER_URL = "https://harsha-store.onrender.com";
 
 /* create single socket instance */
 const socket = io(SERVER_URL, {
@@ -50,21 +49,18 @@ export function useSocket() {
 
   const calculatePrice = (data, onProgress, onResult) => {
 
-    const handleProgress = (progress) => {
-      if (onProgress) onProgress(progress);
-    };
-
-    const handleResult = (result) => {
-      if (onResult) onResult(result);
-    };
-
     socket.off("price_progress");
     socket.off("price_result");
 
     socket.emit("calculate_price", data);
 
-    socket.on("price_progress", handleProgress);
-    socket.once("price_result", handleResult);
+    socket.on("price_progress", (progress) => {
+      if (onProgress) onProgress(progress);
+    });
+
+    socket.once("price_result", (result) => {
+      if (onResult) onResult(result);
+    });
 
   };
 
