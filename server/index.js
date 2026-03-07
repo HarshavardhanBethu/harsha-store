@@ -14,11 +14,7 @@ const server = http.createServer(app);
 
 /* ---------------- CORS ---------------- */
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"]
-}));
-
+app.use(cors());
 app.use(express.json());
 
 /* ---------------- Socket Setup ---------------- */
@@ -30,19 +26,20 @@ const io = new Server(server, {
   }
 });
 
-app.use(cors());
 /* ---------------- Upload Folder ---------------- */
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+const uploadPath = path.join(__dirname, "uploads");
 
-if (!fs.existsSync("./uploads")) {
-  fs.mkdirSync("./uploads", { recursive: true });
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
+
+app.use("/uploads", express.static(uploadPath));
 
 /* ---------------- Upload Setup ---------------- */
 
 const storage = multer.diskStorage({
-  destination: "./uploads/",
+  destination: uploadPath,
   filename: (req, file, cb) => {
     cb(null, uuidv4() + path.extname(file.originalname));
   }
