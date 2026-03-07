@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSocket } from "../hooks/useSocket";
-import { createOrder } from "../api";
 
 const STEPS = ["Select Shirt", "Features", "Upload", "AI Design", "Pricing", "Order"];
 
 const SHIRTS = [
-  { id:1, name:"Classic White Formal",  price:1034, color:"#f0ece4", fabric:"Premium Cotton",  badge:"Bestseller" },
+  { id:1, name:"Classic White Formal",   price:1034, color:"#f0ece4", fabric:"Premium Cotton",  badge:"Bestseller" },
   { id:2, name:"Navy Blue Oxford",       price:899,  color:"#1a2e4a", fabric:"Oxford Weave",    badge:"New" },
   { id:3, name:"Charcoal Grey Linen",    price:1199, color:"#4a4a4a", fabric:"Pure Linen",      badge:"Premium" },
   { id:4, name:"Sky Blue Casual",        price:749,  color:"#7ab8d4", fabric:"Cotton Blend",    badge:"Sale" },
@@ -88,7 +87,7 @@ export default function Customize() {
     setAiLoading(true);
     setAiResult(null);
     try {
-      const { data } = await axios.post("/api/generate-design", {
+      const { data } = await axios.post("https://harsha-store.onrender.com/api/generate-design", {
         shirtName: shirt ? shirt.name : "",
         fabric: shirt ? shirt.fabric : "",
         features: selected.map(s => s.feature),
@@ -124,19 +123,25 @@ export default function Customize() {
     );
   }
 
-async function placeOrder() {
+  // UPDATED PLACE ORDER FUNCTION
+  async function placeOrder() {
 
   if (!pricing) return;
 
   try {
 
-    const data = await createOrder({
-      shirtName: shirt ? shirt.name : "",
-      designName: aiResult ? aiResult.designName : "Custom Design",
-      size,
-      features: selected.map(s => s.feature),
-      total: pricing.total
-    });
+    const response = await axios.post(
+      "https://harsha-store.onrender.com/api/orders",
+      {
+        shirtName: shirt ? shirt.name : "",
+        designName: aiResult ? aiResult.designName : "Custom Design",
+        size: size,
+        features: selected.map(s => s.feature),
+        total: pricing.total
+      }
+    );
+
+    const data = response.data;
 
     setOrder(data);
     setTrackSteps(data.trackingSteps);
@@ -156,43 +161,22 @@ async function placeOrder() {
           clearInterval(poll);
         }
 
-      } catch (e) {
+      } catch (err) {
+        console.error(err);
         clearInterval(poll);
       }
 
     }, 2500);
 
-  } catch (e) {
+  } catch (error) {
 
-    alert("Order failed: " + e.message);
+    console.error(error);
+    alert("Order failed");
 
   }
 
-    if (!pricing) return;
-    try {
-      const { data } = await axios.post("/api/orders", {
-        shirtName: shirt ? shirt.name : "",
-        designName: aiResult ? aiResult.designName : "Custom Design",
-        size,
-        features: selected.map(s => s.feature),
-        total: pricing.total,
-      });
-      setOrder(data);
-      setTrackSteps(data.trackingSteps);
-      setStep(5);
-      const poll = setInterval(async () => {
-        try {
-          const r = await axios.get("/api/orders/" + data.id);
-          setTrackSteps(r.data.trackingSteps);
-          if (r.data.trackingSteps.every(s => s.done)) clearInterval(poll);
-        } catch (e) {
-          clearInterval(poll);
-        }
-      }, 2500);
-    } catch (e) {
-      alert("Order failed: " + e.message);
-    }
-  }
+}
+  
 
   function canNext() {
     if (step === 0) return !!shirt;

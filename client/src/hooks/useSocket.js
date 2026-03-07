@@ -6,10 +6,11 @@ const SERVER_URL = "https://harsha-store.onrender.com";
 
 /* create single socket instance */
 const socket = io(SERVER_URL, {
-  transports: ["websocket"],
-  reconnection: true
+  transports: ["websocket", "polling"],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 2000
 });
-
 export function useSocket() {
 
   const [connected, setConnected] = useState(false);
